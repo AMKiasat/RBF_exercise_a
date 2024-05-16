@@ -15,19 +15,14 @@ class RBF(nn.Module):
         self.linear.bias = nn.Parameter(torch.Tensor(bias).float())
         self.variance = nn.Parameter(torch.ones(num_centroids))
 
-    def gaussian(self, x, c, sigma):
-        return torch.exp(-((x - c) ** 2) / (2 * sigma ** 2))
+    def gaussian(self, x, c, v):
+        return torch.exp(-((x - c) ** 2) / (2 * v ** 2))
 
     def forward(self, x):
-        with torch.no_grad():
-            basis_func_output = self.gaussian(
-                x.unsqueeze(1), self.centers.unsqueeze(0), self.variance
-            )
-            # Compute hidden layer output
-            hidden_output = basis_func_output.sum(dim=2)
-            # Compute final output
-            output = self.linear(hidden_output)
-            return output
+        radial_out = self.gaussian(x.unsqueeze(1), self.centers, self.variance)
+        hidden = radial_out.sum(dim=2)
+        output = self.linear(hidden)
+        return output
 
 
 if __name__ == '__main__':
@@ -45,9 +40,11 @@ if __name__ == '__main__':
 
     model = RBF(input_dim, hidden_dim, output_dim, num_centroids, centers, w, b, v)
 
-    outputs = model.forward(torch.Tensor(torch.tensor(x).unsqueeze(1)))
+    outputs = model.forward(torch.tensor(x).unsqueeze(1))
     criterion = nn.MSELoss()
-    loss = criterion(torch.Tensor(torch.tensor(y).unsqueeze(1)), outputs)
-    print(outputs)
-    # for i in range(len(x)):
-    #
+    loss = criterion(torch.tensor(y).unsqueeze(1), outputs)
+
+    print("predictions:")
+    for i in range(len(outputs)):
+        print(outputs[i].item())
+    print("\nMean squere error: ", loss.item())
